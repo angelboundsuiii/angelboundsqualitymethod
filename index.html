@@ -331,6 +331,19 @@
       font-size: 0.88rem;
       margin-bottom: 2px;
     }
+    
+    .compare-card { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+    .compare-card:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(232, 74, 127, 0.16); }
+    .compare-card.active-compare { outline: 2px solid var(--pink); outline-offset: 2px; }
+    .compare-controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .compare-controls .btn { flex: 0 0 auto; min-width: 120px; }
+
     .compare-hint {
       text-align: center;
       margin-top: 12px;
@@ -612,9 +625,9 @@
         <ul class="nav-links">
           <li><a href="#tools">Tools</a></li>
           <li><a href="#how">How it works</a></li>
-          <li><a href="https://discord.gg/angelbounds" target="_blank" rel="noopener">Discord</a></li>
+          <li><a href="https://discord.gg/angeibounds" target="_blank" rel="noopener">Discord</a></li>
         </ul>
-        <a class="nav-cta" href="https://discord.gg/angelbounds" target="_blank" rel="noopener">Join Discord →</a>
+        <a class="nav-cta" href="https://discord.gg/angeibounds" target="_blank" rel="noopener">Join Discord →</a>
       </nav>
 
       <section class="hero">
@@ -623,7 +636,7 @@
         <p>Patch quality + FPS or downscale to clean 1080p. Processing stays on your device.</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="#tools" style="max-width:200px">Upload a video →</a>
-          <a class="btn btn-secondary" href="https://discord.gg/angelbounds" target="_blank" rel="noopener">Discord</a>
+          <a class="btn btn-secondary" href="https://discord.gg/angeibounds" target="_blank" rel="noopener">Discord</a>
         </div>
         <div class="pills">
           <div class="pill"><span>✦</span> Full 1080p</div>
@@ -644,14 +657,14 @@
           <div class="compare-label good">angelbounds · patched</div>
         </div>
         <div class="compare-grid">
-          <div class="compare-card">
+          <div class="compare-card" id="card-before" title="Click to play / pause">
             <video id="vid-before" src="before-web.mp4" muted loop playsinline></video>
             <div class="compare-meta">
               <strong>Before</strong>
               Heavy compression · soft details
             </div>
           </div>
-          <div class="compare-card">
+          <div class="compare-card" id="card-after" title="Click to play / pause">
             <video id="vid-after" src="AFTER!.mp4" muted loop playsinline></video>
             <div class="compare-meta">
               <strong>After</strong>
@@ -659,7 +672,11 @@
             </div>
           </div>
         </div>
-        <p class="compare-hint">Videos play together · mute on by default</p>
+        <div class="compare-controls">
+          <button type="button" class="btn btn-secondary" id="btn-compare-toggle">Play / Pause</button>
+          <button type="button" class="btn btn-secondary" id="btn-compare-restart">Restart</button>
+        </div>
+        <p class="compare-hint">Click a video or use the buttons · both stay in sync</p>
       </section>
 
       <div class="tabs" id="tools">
@@ -781,24 +798,59 @@
     function unlockApp() {
       $("license-gate").classList.add("hidden");
       $("app").classList.add("unlocked");
-      // start compare videos once unlocked
+      setupCompareVideos();
+    }
+
+    function setupCompareVideos() {
       const a = $("vid-before");
       const b = $("vid-after");
-      if (a && b) {
-        const playBoth = () => {
-          a.play().catch(() => {});
-          b.play().catch(() => {});
-        };
-        a.addEventListener("play", () => { if (b.paused) b.play().catch(() => {}); });
-        b.addEventListener("play", () => { if (a.paused) a.play().catch(() => {}); });
-        // keep roughly in sync
-        setInterval(() => {
-          if (!a.paused && !b.paused && Math.abs(a.currentTime - b.currentTime) > 0.35) {
-            b.currentTime = a.currentTime;
-          }
-        }, 500);
+      if (!a || !b) return;
+
+      const sync = (master, slave) => {
+        if (Math.abs(master.currentTime - slave.currentTime) > 0.25) {
+          slave.currentTime = master.currentTime;
+        }
+      };
+
+      const playBoth = async () => {
+        try { await a.play(); } catch (_) {}
+        try { await b.play(); } catch (_) {}
+      };
+      const pauseBoth = () => { a.pause(); b.pause(); };
+
+      const toggleBoth = () => {
+        if (a.paused || b.paused) playBoth();
+        else pauseBoth();
+      };
+
+      // click either card / video to play or pause both
+      const bindClick = (el) => {
+        el.addEventListener("click", (e) => {
+          e.preventDefault();
+          toggleBoth();
+        });
+      };
+      bindClick($("card-before") || a);
+      bindClick($("card-after") || b);
+
+      $("btn-compare-toggle")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        toggleBoth();
+      });
+      $("btn-compare-restart")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        a.currentTime = 0;
+        b.currentTime = 0;
         playBoth();
-      }
+      });
+
+      // keep in sync while playing
+      setInterval(() => {
+        if (!a.paused && !b.paused) sync(a, b);
+      }, 400);
+
+      // autoplay once unlocked
+      playBoth();
     }
 
     async function initLicense() {
