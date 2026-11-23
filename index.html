@@ -799,6 +799,7 @@
   </style>
 </head>
 <body>
+  <div id="fall-layer" class="fall-layer" aria-hidden="true"></div>
   <div class="sparkle">⋆</div>
   <div class="sparkle">♡</div>
   <div class="sparkle">✿</div>
@@ -1254,26 +1255,40 @@
     };
 
 
-    // falling hearts / stars / flowers
+    // Falling background symbols: start above the screen, fall down, then get removed.
     (function spawnFalls() {
       const layer = document.getElementById("fall-layer");
       if (!layer) return;
-      const symbols = ["♡", "⋆", "✿", "✧", "❀", "★", "♥", "❁"];
-      const count = 55;
-      for (let i = 0; i < count; i++) {
+
+      const symbols = [
+        "♡", "♥", "ღ", "୨୧", "⋆", "✦", "✧", "★", "☆", "✩",
+        "✿", "❀", "❁", "❃", "❋", "ꕤ", "༄", "ೃ", "ੈ", "୭",
+        "𐙚", "₊", "˚", "｡", "･", "୨", "୧", "⟡", "❥", "ෆ"
+      ];
+      const count = 115;
+
+      function addSymbol(initial = false) {
         const el = document.createElement("span");
         el.className = "fall";
-        el.textContent = symbols[i % symbols.length];
-        el.style.left = Math.random() * 100 + "%";
-        el.style.fontSize = (0.7 + Math.random() * 1.1) + "rem";
-        el.style.animationDuration = (6 + Math.random() * 12) + "s";
-        el.style.animationDelay = (-Math.random() * 16) + "s";
-        el.style.opacity = String(0.28 + Math.random() * 0.4);
-        // slight horizontal drift variation
-        const drift = Math.floor(Math.random() * 80 - 40);
-        el.style.setProperty("--drift", drift + "px");
+        el.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        el.style.left = Math.random() * 100 + "vw";
+        el.style.fontSize = (0.75 + Math.random() * 1.25) + "rem";
+        el.style.animationDuration = (7 + Math.random() * 9) + "s";
+        el.style.setProperty("--fall-opacity", String(0.3 + Math.random() * 0.42));
+        el.style.setProperty("--drift", Math.floor(Math.random() * 100 - 50) + "px");
+
+        // Stagger the first wave across the screen; new symbols always begin above it.
+        if (initial) {
+          el.style.animationDelay = (-Math.random() * 12) + "s";
+        }
+        el.addEventListener("animationend", () => {
+          el.remove();
+          addSymbol(false);
+        }, { once: true });
         layer.appendChild(el);
       }
+
+      for (let i = 0; i < count; i++) addSymbol(true);
     })();
 
     initLicense();
