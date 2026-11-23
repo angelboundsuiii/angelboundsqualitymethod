@@ -332,6 +332,95 @@
       margin-bottom: 2px;
     }
     
+    
+    .compare-slider-wrap {
+      position: relative;
+      max-width: 360px;
+      margin: 0 auto;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1.5px solid var(--pink-soft);
+      box-shadow: var(--shadow);
+      background: #1a0a12;
+      user-select: none;
+      touch-action: none;
+      cursor: ew-resize;
+    }
+    .compare-slider-wrap video {
+      display: block;
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      max-height: 480px;
+      object-fit: cover;
+      pointer-events: none;
+    }
+    .compare-slider-after {
+      position: absolute;
+      inset: 0;
+      width: 50%;
+      overflow: hidden;
+      border-right: 2px solid #fff;
+    }
+    .compare-slider-after video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      max-width: none;
+      max-height: none;
+      /* width set by JS to match container */
+    }
+    .compare-slider-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 36px;
+      margin-left: -18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3;
+    }
+    .compare-slider-handle::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 2px;
+      margin-left: -1px;
+      background: #fff;
+      box-shadow: 0 0 8px rgba(0,0,0,0.35);
+    }
+    .compare-slider-knob {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ff8ab8, var(--pink-deep));
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 4px 14px rgba(232, 74, 127, 0.45);
+      border: 2px solid #fff;
+      z-index: 1;
+    }
+    .compare-side-labels {
+      display: flex;
+      justify-content: space-between;
+      max-width: 360px;
+      margin: 10px auto 0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .compare-side-labels .bad { color: var(--danger); }
+    .compare-side-labels .good { color: var(--success); }
+
     .compare-card { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
     .compare-card:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(232, 74, 127, 0.16); }
     .compare-card.active-compare { outline: 2px solid var(--pink); outline-offset: 2px; }
@@ -652,31 +741,24 @@
           <h2>See the <span>difference</span></h2>
           <p>Same clip — TikTok compression vs angelbounds quality</p>
         </div>
-        <div class="compare-labels">
-          <div class="compare-label bad">TikTok · low quality</div>
-          <div class="compare-label good">angelbounds · patched</div>
+        <div class="compare-slider-wrap" id="compare-slider">
+          <video id="vid-before" src="before-web.mp4" muted loop playsinline></video>
+          <div class="compare-slider-after" id="compare-after-clip">
+            <video id="vid-after" src="AFTER%21.mp4" muted loop playsinline></video>
+          </div>
+          <div class="compare-slider-handle" id="compare-handle">
+            <div class="compare-slider-knob">⟷</div>
+          </div>
         </div>
-        <div class="compare-grid">
-          <div class="compare-card" id="card-before" title="Click to play / pause">
-            <video id="vid-before" src="before-web.mp4" muted loop playsinline></video>
-            <div class="compare-meta">
-              <strong>Before</strong>
-              Heavy compression · soft details
-            </div>
-          </div>
-          <div class="compare-card" id="card-after" title="Click to play / pause">
-            <video id="vid-after" src="AFTER!.mp4" muted loop playsinline></video>
-            <div class="compare-meta">
-              <strong>After</strong>
-              Cleaner quality · sharper motion
-            </div>
-          </div>
+        <div class="compare-side-labels">
+          <span class="bad">← TikTok</span>
+          <span class="good">angelbounds →</span>
         </div>
         <div class="compare-controls">
           <button type="button" class="btn btn-secondary" id="btn-compare-toggle">Play / Pause</button>
           <button type="button" class="btn btn-secondary" id="btn-compare-restart">Restart</button>
         </div>
-        <p class="compare-hint">Click a video or use the buttons · both stay in sync</p>
+        <p class="compare-hint">Drag the handle to compare · click Play to start both</p>
       </section>
 
       <div class="tabs" id="tools">
@@ -804,34 +886,63 @@
     function setupCompareVideos() {
       const a = $("vid-before");
       const b = $("vid-after");
-      if (!a || !b) return;
+      const wrap = $("compare-slider");
+      const clip = $("compare-after-clip");
+      const handle = $("compare-handle");
+      if (!a || !b || !wrap || !clip) return;
 
-      const sync = (master, slave) => {
-        if (Math.abs(master.currentTime - slave.currentTime) > 0.25) {
-          slave.currentTime = master.currentTime;
-        }
+      const layoutAfter = () => {
+        const w = wrap.clientWidth;
+        b.style.width = w + "px";
+        b.style.height = wrap.clientHeight + "px";
       };
+      layoutAfter();
+      window.addEventListener("resize", layoutAfter);
+      a.addEventListener("loadeddata", layoutAfter);
+      b.addEventListener("loadeddata", layoutAfter);
+
+      let pct = 50;
+      const setPct = (p) => {
+        pct = Math.max(5, Math.min(95, p));
+        clip.style.width = pct + "%";
+        handle.style.left = pct + "%";
+      };
+      setPct(50);
+
+      let dragging = false;
+      const posToPct = (clientX) => {
+        const r = wrap.getBoundingClientRect();
+        return ((clientX - r.left) / r.width) * 100;
+      };
+      const onDown = (e) => {
+        dragging = true;
+        const x = e.touches ? e.touches[0].clientX : e.clientX;
+        setPct(posToPct(x));
+        e.preventDefault();
+      };
+      const onMove = (e) => {
+        if (!dragging) return;
+        const x = e.touches ? e.touches[0].clientX : e.clientX;
+        setPct(posToPct(x));
+        e.preventDefault();
+      };
+      const onUp = () => { dragging = false; };
+      wrap.addEventListener("mousedown", onDown);
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+      wrap.addEventListener("touchstart", onDown, { passive: false });
+      window.addEventListener("touchmove", onMove, { passive: false });
+      window.addEventListener("touchend", onUp);
 
       const playBoth = async () => {
         try { await a.play(); } catch (_) {}
         try { await b.play(); } catch (_) {}
       };
       const pauseBoth = () => { a.pause(); b.pause(); };
-
       const toggleBoth = () => {
         if (a.paused || b.paused) playBoth();
         else pauseBoth();
       };
-
-      // click either card / video to play or pause both
-      const bindClick = (el) => {
-        el.addEventListener("click", (e) => {
-          e.preventDefault();
-          toggleBoth();
-        });
-      };
-      bindClick($("card-before") || a);
-      bindClick($("card-after") || b);
 
       $("btn-compare-toggle")?.addEventListener("click", (e) => {
         e.preventDefault();
@@ -844,12 +955,12 @@
         playBoth();
       });
 
-      // keep in sync while playing
       setInterval(() => {
-        if (!a.paused && !b.paused) sync(a, b);
+        if (!a.paused && !b.paused && Math.abs(a.currentTime - b.currentTime) > 0.25) {
+          b.currentTime = a.currentTime;
+        }
       }, 400);
 
-      // autoplay once unlocked
       playBoth();
     }
 
