@@ -782,18 +782,19 @@
       position: absolute;
       top: -10%;
       font-family: "Cormorant Garamond", serif;
-      color: var(--pink);
-      opacity: 0.35;
+      color: var(--pink-deep);
+      opacity: 0.45;
       animation-name: snowfall;
       animation-timing-function: linear;
       animation-iteration-count: infinite;
       will-change: transform;
+      text-shadow: 0 0 8px rgba(255, 107, 157, 0.25);
     }
     @keyframes snowfall {
-      0% { transform: translateY(-10vh) translateX(0) rotate(0deg); opacity: 0; }
-      8% { opacity: 0.4; }
-      92% { opacity: 0.3; }
-      100% { transform: translateY(110vh) translateX(var(--drift, 30px)) rotate(320deg); opacity: 0; }
+      0% { transform: translateY(-15vh) translateX(0) rotate(0deg); opacity: 0; }
+      5% { opacity: 0.55; }
+      95% { opacity: 0.4; }
+      100% { transform: translateY(115vh) translateX(var(--drift, 30px)) rotate(400deg); opacity: 0; }
     }
   </style>
 </head>
@@ -1258,16 +1259,16 @@
       const layer = document.getElementById("fall-layer");
       if (!layer) return;
       const symbols = ["♡", "⋆", "✿", "✧", "❀", "★", "♥", "❁"];
-      const count = 28;
+      const count = 55;
       for (let i = 0; i < count; i++) {
         const el = document.createElement("span");
         el.className = "fall";
         el.textContent = symbols[i % symbols.length];
         el.style.left = Math.random() * 100 + "%";
         el.style.fontSize = (0.7 + Math.random() * 1.1) + "rem";
-        el.style.animationDuration = (8 + Math.random() * 14) + "s";
+        el.style.animationDuration = (6 + Math.random() * 12) + "s";
         el.style.animationDelay = (-Math.random() * 16) + "s";
-        el.style.opacity = String(0.2 + Math.random() * 0.35);
+        el.style.opacity = String(0.28 + Math.random() * 0.4);
         // slight horizontal drift variation
         const drift = Math.floor(Math.random() * 80 - 40);
         el.style.setProperty("--drift", drift + "px");
